@@ -107,7 +107,7 @@ function getSensorData(device_id, callback) {
         const phase1Data = JSON.parse(row.phase1 || "[]");
         const phase2Data = JSON.parse(row.phase2 || "[]");
         const phase3Data = JSON.parse(row.phase3 || "[]");
-        const three_phaseData = JSON.parse(row.phase3 || "[]");
+        const three_phaseData = JSON.parse(row.three_phase || "[]");
 
         return {
           ...row,
