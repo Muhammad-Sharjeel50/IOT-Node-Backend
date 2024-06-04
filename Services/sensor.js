@@ -1,3 +1,4 @@
+const { json } = require("body-parser");
 const db = require("../Database/db");
 const wifi = require("node-wifi");
 wifi.init({
@@ -11,7 +12,7 @@ function insertSensorData(data, callback) {
     (err, rows) => {
       if (err) return callback(err);
 
-      const { phase1, phase2, phase3, ...sensorData } = data;
+      const { phase1, phase2, phase3, three_phase, ...sensorData } = data;
       const voltageArray = [
         phase1?.voltage,
         phase2?.voltage,
@@ -29,6 +30,7 @@ function insertSensorData(data, callback) {
           phase1: JSON.stringify([phase1]),
           phase2: JSON.stringify([phase2]),
           phase3: JSON.stringify([phase3]),
+          three_phase: JSON.stringify([three_phase]),
           power: sensorData.power,
           carbon_dioxide: sensorData.carbon_dioxide,
           pollutant: sensorData.pollutant,
@@ -57,6 +59,7 @@ function insertSensorData(data, callback) {
           ...JSON.parse(rows[0].phase3 || "[]"),
           phase3,
         ];
+        const updated3phaseArray = [...JSON.parse(rows[0].three_phase || "[]")];
 
         existingData.push(sensorData);
 
@@ -67,6 +70,7 @@ function insertSensorData(data, callback) {
           phase1: JSON.stringify(updatedPhase1Array),
           phase2: JSON.stringify(updatedPhase2Array),
           phase3: JSON.stringify(updatedPhase3Array),
+          three_phase: JSON.stringify(updated3phaseArray),
           power: sensorData.power,
           carbon_dioxide: sensorData.carbon_dioxide,
           pollutant: sensorData.pollutant,
@@ -103,6 +107,7 @@ function getSensorData(device_id, callback) {
         const phase1Data = JSON.parse(row.phase1 || "[]");
         const phase2Data = JSON.parse(row.phase2 || "[]");
         const phase3Data = JSON.parse(row.phase3 || "[]");
+        const three_phaseData = JSON.parse(row.phase3 || "[]");
 
         return {
           ...row,
@@ -110,6 +115,7 @@ function getSensorData(device_id, callback) {
           phase1: phase1Data,
           phase2: phase2Data,
           phase3: phase3Data,
+          three_phase: three_phaseData,
           data: parsedData,
         };
       });

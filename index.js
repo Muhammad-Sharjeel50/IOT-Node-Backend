@@ -21,6 +21,7 @@ function createSensorTable() {
       phase1 JSON,
       phase2 JSON,
       phase3 JSON,
+      three_phase JSON,
       carbon_dioxide FLOAT,
       pollutant VARCHAR(50),
       gas_level FLOAT,

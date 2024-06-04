@@ -19,6 +19,7 @@ function insertSensor(req, res) {
     phase1,
     phase2,
     phase3,
+    three_phase,
     power,
     carbon_dioxide,
     pollutant,
@@ -35,6 +36,7 @@ function insertSensor(req, res) {
     phase1,
     phase2,
     phase3,
+    three_phase,
     power,
     carbon_dioxide,
     pollutant,
@@ -51,7 +53,6 @@ function insertSensor(req, res) {
       .send({ message: "New record created successfully", data: result });
   });
 }
-
 
 function fetchSensorData(req, res) {
   const device_id = req.params.device_id;
