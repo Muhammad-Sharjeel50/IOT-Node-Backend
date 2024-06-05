@@ -13,6 +13,7 @@ function insertSensorData(data, callback) {
       if (err) return callback(err);
 
       const { phase1, phase2, phase3, three_phase, ...sensorData } = data;
+      // console.log("three_phase", three_phase);
       const voltageArray = [
         phase1?.voltage,
         phase2?.voltage,
@@ -59,8 +60,11 @@ function insertSensorData(data, callback) {
           ...JSON.parse(rows[0].phase3 || "[]"),
           phase3,
         ];
-        const updated3phaseArray = [...JSON.parse(rows[0].three_phase || "[]")];
-
+        const updated3phaseArray = [
+          ...JSON.parse(rows[0].three_phase || "[]"),
+          three_phase,
+        ];
+        console.log("updated3phaseArray", updated3phaseArray);
         existingData.push(sensorData);
 
         const updatedData = {
