@@ -9,6 +9,7 @@ const {
   getWifiConnectionUsingCredientals,
   updateDeviceStatus,
   registerDevice,
+  updateNewSensorData
 } = require("../Services/sensor");
 
 function insertSensor(req, res) {
@@ -65,8 +66,16 @@ function fetchSensorData(req, res) {
 function updateSensor(req, res) {
   const device_id = req.params.device_id;
   const newData = req.body;
-
   updateSensorData(device_id, newData, (err, result) => {
+    if (err) return res.status(500).send(`Error: ${err.message}`);
+    res.status(200).send("Sensor data updated successfully");
+  });
+}
+
+function AddSensorData(req, res) {
+  const newData = req.body;
+  console.log(req.body)
+  updateNewSensorData(newData, (err, result) => {
     if (err) return res.status(500).send(`Error: ${err.message}`);
     res.status(200).send("Sensor data updated successfully");
   });
@@ -202,4 +211,5 @@ module.exports = {
   deviceStatus,
   getRegisterDeviceById,
   registerDevices,
+  AddSensorData,
 };

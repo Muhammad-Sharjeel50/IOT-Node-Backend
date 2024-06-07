@@ -1,5 +1,6 @@
 const express = require("express");
 const sensorRouter = require("./Routes/sensor");
+const userRouter = require("./Routes/user");
 const db = require("./Database/db");
 const app = express();
 const port = 5000;
@@ -8,6 +9,7 @@ const cors = require("cors");
 app.use(cors());
 app.use(express.json());
 app.use("/api/sensors", sensorRouter);
+app.use("/api/users", userRouter);
 
 function createSensorTable() {
   const createTableQuery = `
@@ -58,8 +60,10 @@ function createUserTable() {
   const createTableQuery = `
     CREATE TABLE IF NOT EXISTS User (
       id INT AUTO_INCREMENT PRIMARY KEY,
-      device_id VARCHAR(255) NOT NULL,
-      userId VARCHAR(255) NOT NULL,
+      device_id VARCHAR(255),
+      device_name VARCHAR(255),
+      username VARCHAR(255) NOT NULL,
+      email VARCHAR(255) NOT NULL,
       password VARCHAR(255) NOT NULL
     )
   `;

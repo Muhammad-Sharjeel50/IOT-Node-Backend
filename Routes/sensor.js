@@ -9,6 +9,7 @@ const {
   setWifiConnection,
   getWifiConnection,
   deviceStatus,
+  AddSensorData,
 } = require("../Controllers/sensor");
 
 const router = express.Router();
@@ -26,6 +27,8 @@ router.get("/get-wifi-connection", getWifiConnection);
 router.get("/data/:device_id", fetchSensorData);
 
 router.put("/update/:device_id", updateSensor);
+
+router.patch("/update/device", AddSensorData);
 
 router.delete("/delete/:device_id", deleteSensor);
 

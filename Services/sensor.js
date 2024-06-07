@@ -98,6 +98,27 @@ function insertSensorData(data, callback) {
   );
 }
 
+function updateNewSensorData(data, callback) {
+  console.log(data)
+  db.query("SELECT * FROM User WHERE email = ?", [data.email], (err, rows) => {
+    if (err) return callback(err);
+    if (rows.length === 0) {
+      return callback(new Error("Email not found"));
+    }
+
+    // Email exists, update device_name and device_id
+    db.query(
+      "UPDATE User SET device_name = ?, device_id = ? WHERE email = ?",
+      [data.device_name, data.device_id, data.email],
+      (err, result) => {
+        if (err) return callback(err);
+        callback(null, result);
+      }
+    );
+  });
+}
+
+
 function getSensorData(device_id, callback) {
   db.query(
     "SELECT * FROM Sensor WHERE device_id = ?",
@@ -335,4 +356,5 @@ module.exports = {
   updateDeviceStatus,
   registerDevice,
   getDeviceById,
+  updateNewSensorData,
 };
