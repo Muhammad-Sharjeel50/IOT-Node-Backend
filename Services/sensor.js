@@ -64,7 +64,6 @@ function insertSensorData(data, callback) {
           ...JSON.parse(rows[0].three_phase || "[]"),
           three_phase,
         ];
-        console.log("updated3phaseArray", updated3phaseArray);
         existingData.push(sensorData);
 
         const updatedData = {
@@ -99,7 +98,6 @@ function insertSensorData(data, callback) {
 }
 
 function updateNewSensorData(data, callback) {
-  console.log(data)
   db.query("SELECT * FROM User WHERE email = ?", [data.email], (err, rows) => {
     if (err) return callback(err);
     if (rows.length === 0) {
@@ -117,7 +115,6 @@ function updateNewSensorData(data, callback) {
     );
   });
 }
-
 
 function getSensorData(device_id, callback) {
   db.query(

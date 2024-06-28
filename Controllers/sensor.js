@@ -9,7 +9,7 @@ const {
   getWifiConnectionUsingCredientals,
   updateDeviceStatus,
   registerDevice,
-  updateNewSensorData
+  updateNewSensorData,
 } = require("../Services/sensor");
 
 function insertSensor(req, res) {
@@ -74,7 +74,6 @@ function updateSensor(req, res) {
 
 function AddSensorData(req, res) {
   const newData = req.body;
-  console.log(req.body)
   updateNewSensorData(newData, (err, result) => {
     if (err) return res.status(500).send(`Error: ${err.message}`);
     res.status(200).send("Sensor data updated successfully");
@@ -96,7 +95,6 @@ function setWifiCredientals(req, res) {
     userId: userId,
     password: password,
   };
-  console.log("data", data);
 
   setWifiCredientalsUsingCreds(data, (err, result) => {
     if (err) return res.status(500).send(`Error: ${err.message}`);
@@ -137,7 +135,6 @@ function getWifiConnection(req, res) {
 
 function deviceStatus(req, res) {
   const { device_id, status } = req.body;
-  console.log("device ID::", device_id, status);
   if (!["on", "off"].includes(status)) {
     return res
       .status(400)
