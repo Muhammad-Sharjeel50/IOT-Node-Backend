@@ -10,7 +10,11 @@ const {
   getWifiConnection,
   deviceStatus,
   AddSensorData,
+  insertHourlySummary
 } = require("../Controllers/sensor");
+
+const { scheduleSummaryJob } = require('../Tasks/cron');
+
 
 const router = express.Router();
 
@@ -33,5 +37,10 @@ router.patch("/update/device", AddSensorData);
 router.delete("/delete/:device_id", deleteSensor);
 
 router.post("/device-status", deviceStatus);
+
+router.post("/three-phase-summary", insertHourlySummary);
+
+
+router.post('/scheduleSummary', scheduleSummaryJob);
 
 module.exports = router;

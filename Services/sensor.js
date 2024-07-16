@@ -1,6 +1,7 @@
 const { json } = require("body-parser");
 const db = require("../Database/db");
 const wifi = require("node-wifi");
+const moment = require("moment");
 wifi.init({
   iface: null,
 });
@@ -341,6 +342,264 @@ function getDeviceById(device_id, callback) {
   );
 }
 
+// function calculateAndStoreHourlySummary(device_id, callback) {
+//   const currentDateTime = new Date();
+//   const currentDate = currentDateTime.toISOString().split("T")[0];
+//   const currentHour = currentDateTime.getHours();
+
+//   // Calculate start and end times for the current hour
+//   const startTime = `${currentDate} ${String(currentHour).padStart(
+//     2,
+//     "0"
+//   )}:00:00`;
+//   const endTime = `${currentDate} ${String(currentHour).padStart(
+//     2,
+//     "0"
+//   )}:59:59`;
+
+//   // Query to fetch data for the current hour
+//   const query = `
+//     SELECT
+//       AVG(voltage) AS avg_voltage,
+//       AVG(current) AS avg_current,
+//       AVG(power) AS avg_power,
+//       AVG(apparent_power) AS avg_apparent_power,
+//       AVG(reactive_power) AS avg_reactive_power,
+//       AVG(energy) AS avg_energy,
+//       AVG(power_factor) AS avg_power_factor,
+//       AVG(frequency) AS avg_frequency,
+//       COUNT(*) AS data_count
+//     FROM Sensor
+//     WHERE device_id = ? AND
+//           DATE(reading_date) = ? AND
+//           reading_time BETWEEN ? AND ?
+//   `;
+
+//   db.query(query, [device_id, currentDate, startTime, endTime], (err, rows) => {
+//     if (err) {
+//       console.error(`Error calculating hourly summary: ${err.message}`);
+//       return callback(err);
+//     }
+
+//     // Calculate total minutes data was available in this hour
+//     const totalMinutes = rows[0].data_count;
+
+//     // Calculate averages based on available minutes
+//     const summary = {
+//       device_id: device_id,
+//       voltage: rows[0].avg_voltage * totalMinutes,
+//       current: rows[0].avg_current * totalMinutes,
+//       power: rows[0].avg_power * totalMinutes,
+//       apparent_power: rows[0].avg_apparent_power * totalMinutes,
+//       reactive_power: rows[0].avg_reactive_power * totalMinutes,
+//       energy: rows[0].avg_energy * totalMinutes,
+//       power_factor: rows[0].avg_power_factor * totalMinutes,
+//       frequency: rows[0].avg_frequency * totalMinutes,
+//       reading_time: String(currentHour).padStart(2, "0") + ":00:00",
+//       reading_date: currentDate,
+//     };
+
+//     // Divide averages by total minutes to get hourly average
+//     summary.voltage /= totalMinutes;
+//     summary.current /= totalMinutes;
+//     summary.power /= totalMinutes;
+//     summary.apparent_power /= totalMinutes;
+//     summary.reactive_power /= totalMinutes;
+//     summary.energy /= totalMinutes;
+//     summary.power_factor /= totalMinutes;
+//     summary.frequency /= totalMinutes;
+
+//     // Pass summary to callback
+//     callback(null, summary);
+//   });
+// }
+
+function calculateAndStoreHourlySummary(device_id, callback) {
+  const currentDate = moment().format("YYYY-MM-DD");
+  const query = `
+    SELECT
+      device_id, three_phase.power, three_phase.apparent_power, three_phase.reactive_power, 
+      three_phase.energy, three_phase.power_factor, three_phase.frequency, three_phase.reading_time,
+      three_phase.reading_date
+    FROM Sensor
+    WHERE device_id = ? AND DATE(three_phase.reading_date) = ?
+  `;
+
+  db.query(query, [device_id, currentDate], (err, rows) => {
+    if (err) {
+      console.error(`Error fetching data: ${err.message}`);
+      return callback(err);
+    }
+
+    const hourlyData = Array(24)
+      .fill(null)
+      .map(() => ({
+        power: 0,
+        apparent_power: 0,
+        reactive_power: 0,
+        energy: 0,
+        power_factor: 0,
+        frequency: 0,
+        count: 0,
+      }));
+
+    rows.forEach((row) => {
+      const readingTime = moment(row.reading_time, "HH:mm:ss");
+      const hour = readingTime.hours();
+      hourlyData[hour].power += row.power;
+      hourlyData[hour].apparent_power += row.apparent_power;
+      hourlyData[hour].reactive_power += row.reactive_power;
+      hourlyData[hour].energy += row.energy;
+      hourlyData[hour].power_factor += row.power_factor;
+      hourlyData[hour].frequency += row.frequency;
+      hourlyData[hour].count += 1;
+    });
+
+    const summaries = hourlyData.map((hour, index) => {
+      const minutesInHour = hour.count ? hour.count : 60;
+      return {
+        device_id,
+        power: hour.power / minutesInHour || 0,
+        apparent_power: hour.apparent_power / minutesInHour || 0,
+        reactive_power: hour.reactive_power / minutesInHour || 0,
+        energy: hour.energy / minutesInHour || 0,
+        power_factor: hour.power_factor / minutesInHour || 0,
+        frequency: hour.frequency / minutesInHour || 0,
+        reading_time: `${String(index).padStart(2, "0")}:00:00`,
+        reading_date: currentDate,
+      };
+    });
+
+    const summaryInsertPromises = summaries.map(
+      (summary) =>
+        new Promise((resolve, reject) => {
+          db.query(
+            "INSERT INTO ThreePhaseSummary SET ?",
+            summary,
+            (err, result) => {
+              if (err) {
+                console.error(`Error storing summary: ${err.message}`);
+                return reject(err);
+              }
+              resolve(result);
+            }
+          );
+        })
+    );
+
+    Promise.all(summaryInsertPromises)
+      .then(() => {
+        const deleteQuery = `
+          DELETE FROM Sensor
+          WHERE device_id = ? AND DATE(reading_date) = ?
+        `;
+        db.query(deleteQuery, [device_id, currentDate], (err, result) => {
+          if (err) {
+            console.error(`Error deleting old data: ${err.message}`);
+            return callback(err);
+          }
+          callback(null, {
+            message: "Summary stored and old data deleted successfully",
+          });
+        });
+      })
+      .catch(callback);
+  });
+}
+
+function calculateAndStoreHourlySummary(device_id, callback) {
+  const currentDate = moment().format("YYYY-MM-DD");
+  const query = `
+    SELECT
+      device_id, three_phase.power, three_phase.apparent_power, three_phase.reactive_power, 
+      three_phase.energy, three_phase.power_factor, three_phase.frequency, three_phase.reading_time,
+      three_phase.reading_date
+    FROM Sensor
+    WHERE device_id = ? AND DATE(three_phase.reading_date) = ?
+  `;
+
+  db.query(query, [device_id, currentDate], (err, rows) => {
+    if (err) {
+      console.error(`Error fetching data: ${err.message}`);
+      return callback(err);
+    }
+
+    const hourlyData = Array(24)
+      .fill(null)
+      .map(() => ({
+        power: 0,
+        apparent_power: 0,
+        reactive_power: 0,
+        energy: 0,
+        power_factor: 0,
+        frequency: 0,
+        count: 0,
+      }));
+
+    rows.forEach((row) => {
+      const readingTime = moment(row.reading_time, "HH:mm:ss");
+      const hour = readingTime.hours();
+      hourlyData[hour].power += row.power;
+      hourlyData[hour].apparent_power += row.apparent_power;
+      hourlyData[hour].reactive_power += row.reactive_power;
+      hourlyData[hour].energy += row.energy;
+      hourlyData[hour].power_factor += row.power_factor;
+      hourlyData[hour].frequency += row.frequency;
+      hourlyData[hour].count += 1;
+    });
+
+    const summaries = hourlyData.map((hour, index) => {
+      const minutesInHour = hour.count ? hour.count : 60;
+      return {
+        device_id,
+        power: hour.power / minutesInHour || 0,
+        apparent_power: hour.apparent_power / minutesInHour || 0,
+        reactive_power: hour.reactive_power / minutesInHour || 0,
+        energy: hour.energy / minutesInHour || 0,
+        power_factor: hour.power_factor / minutesInHour || 0,
+        frequency: hour.frequency / minutesInHour || 0,
+        reading_time: `${String(index).padStart(2, "0")}:00:00`,
+        reading_date: currentDate,
+      };
+    });
+
+    const summaryInsertPromises = summaries.map(
+      (summary) =>
+        new Promise((resolve, reject) => {
+          db.query(
+            "INSERT INTO ThreePhaseSummary SET ?",
+            summary,
+            (err, result) => {
+              if (err) {
+                console.error(`Error storing summary: ${err.message}`);
+                return reject(err);
+              }
+              resolve(result);
+            }
+          );
+        })
+    );
+
+    Promise.all(summaryInsertPromises)
+      .then(() => {
+        const deleteQuery = `
+          DELETE FROM Sensor
+          WHERE device_id = ? AND DATE(reading_date) = ?
+        `;
+        db.query(deleteQuery, [device_id, currentDate], (err, result) => {
+          if (err) {
+            console.error(`Error deleting old data: ${err.message}`);
+            return callback(err);
+          }
+          callback(null, {
+            message: "Summary stored and old data deleted successfully",
+          });
+        });
+      })
+      .catch(callback);
+  });
+}
+
 module.exports = {
   insertSensorData,
   getSensorData,
@@ -354,4 +613,6 @@ module.exports = {
   registerDevice,
   getDeviceById,
   updateNewSensorData,
+  calculateAndStoreHourlySummary,
+  // calculateAndStoreHourlySummary,
 };

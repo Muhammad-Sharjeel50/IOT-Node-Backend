@@ -10,6 +10,7 @@ const {
   updateDeviceStatus,
   registerDevice,
   updateNewSensorData,
+  calculateAndStoreDailySummary,
 } = require("../Services/sensor");
 
 function insertSensor(req, res) {
@@ -196,6 +197,22 @@ function getRegisterDeviceById(req, res) {
   });
 }
 
+function insertHourlySummary(req, res) {
+  const { device_id } = req.body;
+
+  calculateAndStoreHourlySummary(device_id, (err, summary) => {
+    if (err) {
+      console.error(`Error calculating and storing hourly summary: ${err.message}`);
+      return res.status(500).send(`Error: ${err.message}`);
+    }
+
+    res.status(201).json({
+      message: `Hourly summary stored successfully for ${device_id}`,
+      data: summary,
+    });
+  });
+}
+
 module.exports = {
   insertSensor,
   fetchSensorData,
@@ -209,4 +226,5 @@ module.exports = {
   getRegisterDeviceById,
   registerDevices,
   AddSensorData,
+  insertHourlySummary,
 };
